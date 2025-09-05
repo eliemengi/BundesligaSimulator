@@ -1,0 +1,366 @@
+﻿@page "/"
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<div class="apple">
+    <header class="hero">
+        <h1>Bundesliga Simulation</h1>
+        <p class="sub">Wähle einen Modus und stell deine Simulation zusammen.</p>
+    </header>
+
+    <!-- Segmented Control -->
+    <div class="segment">
+        <button class="@GetSegClass(Mode.Single)" @onclick="() => current = Mode.Single">Einzelspiel</button>
+        <button class="@GetSegClass(Mode.Season)" @onclick="() => current = Mode.Season">Komplette Saison</button>
+    </div>
+
+    @if (current == Mode.Single)
+    {
+        <!-- CARD: Einzelspiel -->
+        <section class="card">
+            <h2>Einzelspiel simulieren</h2>
+
+            <div class="grid">
+                <!-- Team A -->
+                <div class="form-row">
+                    <label>Team A</label>
+                    <select @bind="TeamA" disabled="@(teamsLoading || teams.Count == 0)">
+                        <option value="">— wählen —</option>
+                        @foreach (var t in teams)
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                    @if (teamsLoading)
+                    {
+                        <small class="result">Lade Teams …</small>
+                    }
+                    else if (!string.IsNullOrEmpty(teamsError))
+                    {
+                        <small class="result error">@teamsError</small>
+                    }
+                </div>
+
+                <div class="form-row">
+                    <label>Team B</label>
+                    <select @bind="TeamB" disabled="@(teamsLoading || teams.Count == 0)">
+                        <option value="">— wählen —</option>
+                        @foreach (var t in teams)
+                        {
+                            <option value="@t">@t</option>
+                        }
+                    </select>
+                    @if (teamsLoading)
+                    {
+                        <small class="result">Lade Teams …</small>
+                    }
+                    else if (!string.IsNullOrEmpty(teamsError))
+                    {
+                        <small class="result2 error">@teamsError</small>
+                    }
+                </div>
+
+
+                <!-- Spielort -->
+                <div class="form-row">
+                    <label>Spielort</label>
+                    <div class="pill-group">
+                        <button type="button" class="@GetPillClass(venue==Venue.Home)" @onclick="() => venue = Venue.Home">Team A (Heim)</button>
+                        <button type="button" class="@GetPillClass(venue==Venue.Away)" @onclick="() => venue = Venue.Away">Team B (Heim)</button>
+                        <button type="button" class="@GetPillClass(venue==Venue.Neutral)" @onclick="() => venue = Venue.Neutral">Neutral</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="primary" @onclick="FakeRunSingle">Simulation starten</button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ResultSingle))
+            {
+                <div class="result">@ResultSingle</div>
+            }
+
+        </section>
+    }
+    else
+    {
+        <!-- CARD: Saison -->
+        <section class="card">
+            <h2>Komplette Saison simulieren</h2>
+
+            <div class="grid">
+                <!-- Wettbewerb (liefert API-Shortcut als value) -->
+                <div class="form-row">
+                    <label>Wettbewerb</label>
+                    <select @bind="League">
+                        <option value="bl1">Bundesliga (1)</option>
+                        <option value="bl2" disabled>2. Bundesliga (bald)</option>
+                    </select>
+                </div>
+
+                <!-- Saison -->
+                <div class="form-row">
+                    <label>Saison</label>
+                    <select @bind="Season">
+                        <option>2025/26</option>
+                        <option>2024/25</option>
+                    </select>
+                </div>
+
+                <!-- Runden -->
+                <div class="form-row">
+                    <label>Runden</label>
+                    <div class="pill-group">
+                        <button type="button" class="@GetPillClass(rounds==Rounds.HinRueck)" @onclick="() => rounds = Rounds.HinRueck">Hin &amp; Rückrunde</button>
+                        <button type="button" class="@GetPillClass(rounds==Rounds.NurHin)" @onclick="() => rounds = Rounds.NurHin">Nur Hinrunde</button>
+                    </div>
+                </div>
+
+                <!-- Simulationen -->
+                <div class="form-row">
+                    <label>Simulationen</label>
+                    <input type="number" min="1" max="50000" step="1" @bind="Simulations" />
+                    <small>Nur UI – Logik kommt später.</small>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="primary" @onclick="FakeRunSeason">Saison simulieren</button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ResultSeason))
+            {
+                <div class="result">@ResultSeason</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(ResultSeason2))
+            {
+                <div class="result">@ResultSeason2</div>
+            }
+        </section>
+    }
+</div>
+
+
+
+@code {
+
+    public class OlTeam{
+        public int TeamId{ get; set; }
+        public string TeamName { get; set; } = "";
+        public string? ShortName { get; set; }
+        public string? TeamIconUrl { get; set; }
+    }
+
+
+
+    enum Mode { Single, Season }
+    enum Venue { Home, Away, Neutral }
+    enum Rounds { HinRueck, NurHin }
+
+    Mode current = Mode.Single;
+
+    // Placeholder-Daten – später via API
+
+    List<string> teams = new();
+    bool teamsLoading = false;
+    string? teamsError;
+
+
+    private string _teamA;
+    private string _teamB;
+
+    public string TeamA { get { return _teamA; } set { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Bitte Team auswählen"); _teamA = value; } }
+    public string TeamB { get { return _teamB; } set { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Bitte Team auswählen"); _teamB = value; } }
+
+    Venue venue = Venue.Home;
+    private string _resultSingle = string.Empty;
+    public string ResultSingle { get => _resultSingle; private set => _resultSingle = value; }
+
+    private string _league;
+    public string League
+    {
+        get { return _league; }
+        set
+        {
+            _league = value;
+            leagueShortcut = value; // direkt Shortcut setzen
+            TryLoadTeams();
+        }
+    }
+
+    string leagueShortcut;
+    private string _season;
+    public string Season { get { return _season; } set { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Bitte Saison Auswaählen"); _season = value; leagueShortcut = "bl1"; TryLoadTeams(); } }
+
+    private async void TryLoadTeams()
+    {
+        if (!string.IsNullOrWhiteSpace(leagueShortcut) && !string.IsNullOrWhiteSpace(_season))
+        {
+            await LoadTeamsAsync();
+        }
+    }
+
+    Rounds rounds = Rounds.HinRueck;
+    private int _simulations;
+    public int Simulations { get { return _simulations; } set { _simulations = value; } }
+
+    private string _resultSeason = string.Empty;
+    public string ResultSeason { get => _resultSeason; private set => _resultSeason = value; }
+
+    private string _resultSeason2 = string.Empty;
+    public string ResultSeason2 { get => _resultSeason2; private set => _resultSeason2 = value; }
+
+    /*private string _resultSeason2 = string.Empty;
+    public string ResultSeason2 { get => _resultSeason2; private set => _resultSeason2 = value; }*/
+
+    string GetSegClass(Mode m) => $"seg-btn {(current == m ? "active" : "")}";
+    string GetPillClass(bool active) => $"pill {(active ? "active" : "")}";
+
+
+    static string ToSeasonYear(string seasonLabel){
+        var parts = seasonLabel.Split('/');
+        if (parts.Length > 0)
+        {
+            parts[0].Trim();
+        }
+        return
+            seasonLabel.Trim();
+    }
+
+    async Task LoadTeamsAsync()
+    {
+        try
+        {
+            teamsLoading = true;
+            teamsError = null;
+
+
+            var seasonYear = Season.Split('/')[0]; // nur erstes Jahr, z. B. "2024"
+            var url = $"https://api.openligadb.de/getavailableteams/{leagueShortcut}/{seasonYear}";
+
+            var data = await Http.GetFromJsonAsync<List<OlTeam>>(url);
+            teams = (data ?? new()).Select(t => t.TeamName).OrderBy(n => n).ToList();
+
+            if (!string.IsNullOrEmpty(TeamA) && !teams.Contains(TeamA)) TeamA = "";
+            if (!string.IsNullOrEmpty(TeamB) && !teams.Contains(TeamB)) TeamB = "";
+        }
+        catch (Exception ex)
+        {
+            teamsError = "Teams konnte nicht geladen werden";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            teamsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnInitializedAsync(){
+        League = "bl1";
+        Season = "2025/26";
+        await LoadTeamsAsync();
+    } 
+
+
+    class MatchProbs
+    {
+        private string _league;
+        private string _seasonLabel;
+        private int _seasonYear;
+        private string _homeTeam;
+        private string _awayTeam;
+        private int _matchDay;
+
+        public string League { get => _league;}
+        public string SeasonLabel { get => _seasonLabel; }
+        public int SeasonYear { get => _seasonYear; }
+        public string HomeTeam { get => _homeTeam; }
+        public string AwayTeam { get => _awayTeam; }
+        public DateTime KickOff { get; set; } // Standardmäßig UTC, kann aber angepasst werden
+        public enum Venue { Home, Away, Neutral }
+        public int MatchDay
+        {
+            get => _matchDay;
+        } // Standardmäßig 1, kann angepasst werden
+
+        public MatchProbs(string league, string seasonLabel, int seasonYear, string homeTeam, string awayTeam,DateTime kickOff, int matchday)
+        {
+            if (string.IsNullOrWhiteSpace(league)) throw new ArgumentException("Bitte Liga auswählen");
+            if (string.IsNullOrWhiteSpace(seasonLabel)) throw new ArgumentException("Bitte Saison auswählen");
+            if (seasonYear <2006 || seasonYear >2027) throw new ArgumentException("Bitte gültiges Jahr auswählen");
+            if (string.IsNullOrWhiteSpace(homeTeam)) throw new ArgumentException("Bitte Heimteam auswählen");
+            if (string.IsNullOrWhiteSpace(awayTeam)) throw new ArgumentException("Bitte Auswärtsteam auswählen");
+            if (homeTeam == awayTeam) throw new ArgumentException("Heim- und Auswärtsteam müssen unterschiedlich sein");
+            if (matchday < 1 || matchday > 34) throw new ArgumentException("Bitte gültigen Spieltag wählen (1-34)");
+            _league = league;
+            _seasonLabel = seasonLabel;
+            _seasonYear = seasonYear;
+            _homeTeam = homeTeam;
+            _awayTeam = awayTeam;
+            _matchDay = matchday;
+        }
+        
+    }
+    //Aufbereitete, numerische Merkmale für das Modell (aus MatchProps + API-Daten gebaut).
+	class MatchFeatures
+	{
+		public double FormHome { get; set; }
+        public double FormAway { get; set; }
+		public double AttackHome { get; set; }
+        public double AttackAway { get; set; }
+        public double DefenseHome { get; set; }
+        public double DefenseAway { get; set; }
+		public double HomeAdvantage { get; set; }
+        public int TableRankHome { get; set; } // Platz in Tabelle
+        public int TableRankAway { get; set; }
+        public int MatchDay { get; set; }      // Spieltag (1–34)
+
+        public int WinsHome { get; set; }      // Saisonbilanz (aus API berechnet)
+        public int WinsAway { get; set; }
+        public int LossesHome { get; set; }
+        public int LossesAway { get; set; }
+        public int DrawsHome { get; set; }
+        public int DrawsAway { get; set; }
+	}
+    public sealed class OlTableRow
+    {
+        public int Rank { get; set; }
+        public string TeamName { get; set; } = "";
+        public int Points { get; set; }
+        public int Won { get; set; }
+        public int Draw { get; set; }
+        public int Lost { get; set; }
+        public int Goals { get; set; }
+        public int OpponentGoals { get; set; }
+
+    }
+
+
+
+
+    // Nur UI-Feedback (kein echtes Rechnen)
+    void FakeRunSingle()
+    {
+        if (string.IsNullOrWhiteSpace(TeamA) || string.IsNullOrWhiteSpace(TeamB) || TeamA == TeamB)
+        {
+            ResultSingle = "Bitte zwei unterschiedliche Teams wählen.";
+            return;
+        }
+        var ort = venue == Venue.Home ? "Team A (Heim)" : venue == Venue.Away ? "Team B (Heim)" : "neutral";
+        ResultSingle = $"Simulation vorbereitet: {TeamA} vs {TeamB} – Ort: {ort}.";
+    }
+
+    void FakeRunSeason()
+    {
+        if (_simulations < 0 || _simulations > 50000){
+            ResultSeason = "Bitte wähle eine Zahl von 1-50.000";
+        }
+        else    
+        {
+            ResultSeason2 = $"Simulation vorbereitet: {League} • {Season} • {rounds} • {Simulations:N0} Läufe.";
+        }
+    }
+
+}
