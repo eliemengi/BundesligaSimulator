@@ -394,3 +394,100 @@ button.primary {
         border-radius: 12px;
         color: #111827;
     }
+.standings-wrap {
+    overflow-x: auto;
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+    .standings-table thead th {
+        text-align: left;
+        font-weight: 600;
+        padding: 10px 12px;
+        border-bottom: 1px solid #e9e9ee;
+        background: #fafafa;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .standings-table tbody td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f0f0f5;
+        vertical-align: middle;
+    }
+
+    .standings-table tbody tr:hover {
+        background: #fafbff;
+    }
+
+.rank {
+    width: 44px;
+    color: #6b7280;
+}
+
+.club {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 200px;
+}
+
+.crest {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.06);
+}
+
+.club-name {
+    font-weight: 600;
+}
+
+.gd.pos {
+    color: #0f9d58;
+    font-weight: 600;
+}
+
+.gd.neg {
+    color: #d93025;
+    font-weight: 600;
+}
+
+.gd.neu {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.pts {
+    display: inline-block;
+    min-width: 36px;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #2563eb;
+    color: #fff;
+    font-weight: 700;
+}
+
+@media (max-width: 720px) {
+    .standings-table thead th:nth-child(3),
+    .standings-table thead th:nth-child(4),
+    .standings-table thead th:nth-child(5),
+    .standings-table thead th:nth-child(6),
+    .standings-table thead th:nth-child(7) {
+        display: none;
+    }
+
+    .standings-table tbody td:nth-child(3),
+    .standings-table tbody td:nth-child(4),
+    .standings-table tbody td:nth-child(5),
+    .standings-table tbody td:nth-child(6),
+    .standings-table tbody td:nth-child(7) {
+        display: none;
+    }
+}

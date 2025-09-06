@@ -126,7 +126,7 @@
             </div>
 
             <div class="actions">
-                <button class="primary" @onclick="FakeRunSeason">Saison simulieren</button>
+                <button class="primary" @onclick="LoadTableAsync">Saison simulieren</button>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(ResultSeason))
@@ -138,6 +138,63 @@
                 <div class="result">@ResultSeason2</div>
             }
         </section>
+
+        @* Nur anzeigen, wenn wir wirklich laden/geladen/Fehler haben *@
+        @if (tableLoading || !string.IsNullOrWhiteSpace(tableError) || table.Any())
+        {
+            <section class="card">
+                <h2>Saison Output</h2>
+
+                <div class="standings-wrap">
+                    <table class="standings-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Verein</th>
+                                <th>Sp</th>
+                                <th>S</th>
+                                <th>U</th>
+                                <th>N</th>
+                                <th>GT</th>
+                                <th>TD</th>
+                                <th>Pk</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in table)
+                            {
+                                var played = row.Won + row.Draw + row.Lost;
+                                var gd = row.Goals - row.OpponentGoals;
+                                teamIcons.TryGetValue(row.TeamName, out var iconUrl);
+
+                                <tr>
+                                    <td class="rank">@row.Rank</td>
+                                    <td class="club">
+                                        @if (!string.IsNullOrWhiteSpace(iconUrl))
+                                        {
+                                            <img class="crest" src="@iconUrl" alt="" width="22" height="22" loading="lazy" />
+
+                                        }
+                                        <span class="club-name">@row.TeamName</span>
+                                    </td>
+                                    <td>@played</td>
+                                    <td>@row.Won</td>
+                                    <td>@row.Draw</td>
+                                    <td>@row.Lost</td>
+                                    <td>@row.Goals:@row.OpponentGoals</td>
+                                    <td class="gd @(gd > 0 ? "pos" : gd < 0 ? "neg" : "neu")">@gd</td>
+                                    <td><span class="pts">@row.Points</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        }
+
+
     }
 </div>
 
@@ -151,8 +208,6 @@
         public string? ShortName { get; set; }
         public string? TeamIconUrl { get; set; }
     }
-
-
 
     enum Mode { Single, Season }
     enum Venue { Home, Away, Neutral }
@@ -191,7 +246,7 @@
 
     string leagueShortcut;
     private string _season;
-    public string Season { get { return _season; } set { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Bitte Saison Auswaählen"); _season = value; leagueShortcut = "bl1"; TryLoadTeams(); } }
+    public string Season { get { return _season; } set { if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException("Bitte Saison Auswaählen"); _season = value; /*leagueShortcut = "bl1";*/ TryLoadTeams(); } }
 
     private async void TryLoadTeams()
     {
@@ -241,6 +296,7 @@
 
             var data = await Http.GetFromJsonAsync<List<OlTeam>>(url);
             teams = (data ?? new()).Select(t => t.TeamName).OrderBy(n => n).ToList();
+            teamIcons = (data ?? new()).ToDictionary(t => t.TeamName, t => t.TeamIconUrl);
 
             if (!string.IsNullOrEmpty(TeamA) && !teams.Contains(TeamA)) TeamA = "";
             if (!string.IsNullOrEmpty(TeamB) && !teams.Contains(TeamB)) TeamB = "";
@@ -301,18 +357,18 @@
             _awayTeam = awayTeam;
             _matchDay = matchday;
         }
-        
+
     }
     //Aufbereitete, numerische Merkmale für das Modell (aus MatchProps + API-Daten gebaut).
-	class MatchFeatures
-	{
-		public double FormHome { get; set; }
+    class MatchFeatures
+    {
+        public double FormHome { get; set; }
         public double FormAway { get; set; }
-		public double AttackHome { get; set; }
+        public double AttackHome { get; set; }
         public double AttackAway { get; set; }
         public double DefenseHome { get; set; }
         public double DefenseAway { get; set; }
-		public double HomeAdvantage { get; set; }
+        public double HomeAdvantage { get; set; }
         public int TableRankHome { get; set; } // Platz in Tabelle
         public int TableRankAway { get; set; }
         public int MatchDay { get; set; }      // Spieltag (1–34)
@@ -323,7 +379,7 @@
         public int LossesAway { get; set; }
         public int DrawsHome { get; set; }
         public int DrawsAway { get; set; }
-	}
+    }
     public sealed class OlTableRow
     {
         public int Rank { get; set; }
@@ -337,7 +393,44 @@
 
     }
 
+    bool isLoadingH2H;
+    string? h2hError;
+    H2HView? lastH2H;
+    List<H2HView> recentH2H = new();
 
+    bool tableLoading;
+    string? tableError;
+    bool showFullTable;
+    List<OlTableRow> table = new(); // deine OlTableRow hast du schon – passt
+
+
+    record H2HView(string Team1, string Team2, int G1, int G2, DateTime DateLocal, string? Icon1, string? Icon2);
+
+    private async Task LoadTableAsync(){
+        tableError = null;
+        tableLoading = true;
+        table.Clear();
+
+        try{
+            var seasonYear = Season.Split("/")[0]; // "2025" aus "2025/26"
+            var url = $"https://api.openligadb.de/getbltable/{leagueShortcut}/{seasonYear}";
+            var rows = await Http.GetFromJsonAsync<List<OlTableRow>>(url) ?? new();
+            table = rows.OrderBy(r => r.Rank).ToList();
+        }
+
+        catch(Exception ex){
+            Console.WriteLine(ex);
+            tableError = "Tabelle konnte nicht geladen werden";
+        }
+        finally{
+            tableLoading = false;
+            StateHasChanged();
+
+        }
+
+    }
+
+    Dictionary<string, string?> teamIcons = new();
 
 
     // Nur UI-Feedback (kein echtes Rechnen)
