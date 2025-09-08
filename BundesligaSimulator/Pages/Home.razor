@@ -41,6 +41,7 @@
                     }
                 </div>
 
+                <!-- Team B -->
                 <div class="form-row">
                     <label>Team B</label>
                     <select @bind="TeamB" disabled="@(teamsLoading || teams.Count == 0)">
@@ -60,28 +61,51 @@
                     }
                 </div>
 
-
                 <!-- Spielort -->
                 <div class="form-row">
                     <label>Spielort</label>
                     <div class="pill-group">
-                        <button type="button" class="@GetPillClass(venue==Venue.Home)" @onclick="() => venue = Venue.Home">Team A (Heim)</button>
-                        <button type="button" class="@GetPillClass(venue==Venue.Away)" @onclick="() => venue = Venue.Away">Team B (Heim)</button>
-                        <button type="button" class="@GetPillClass(venue==Venue.Neutral)" @onclick="() => venue = Venue.Neutral">Neutral</button>
+                        <button type="button" class="@GetPillClass(venue == Venue.Home)" @onclick="() => venue = Venue.Home">Team A (Heim)</button>
+                        <button type="button" class="@GetPillClass(venue == Venue.Away)" @onclick="() => venue = Venue.Away">Team B (Heim)</button>
+                        <button type="button" class="@GetPillClass(venue == Venue.Neutral)" @onclick="() => venue = Venue.Neutral">Neutral</button>
                     </div>
                 </div>
             </div>
 
             <div class="actions">
-                <button class="primary" @onclick="FakeRunSingle">Simulation starten</button>
+                <button class="primary" @onclick="LoadH2Async">Simulation starten</button>
             </div>
+
+            @if (isLoadingH2H || !string.IsNullOrWhiteSpace(h2hError) || lastH2H != null)
+            {
+                <section class="card">
+                    <h2>Letztes Duell</h2>
+
+                    @if (isLoadingH2H)
+                    {
+                        <p>Spiel wird geladen...</p>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(h2hError))
+                    {
+                        <p class="error">@h2hError</p>
+                    }
+                    else if (lastH2H != null)
+                    {
+                        <p>
+                            @lastH2H.Team1 @lastH2H.G1 - @lastH2H.G2 @lastH2H.Team2
+                            (@lastH2H.DateLocal.ToShortDateString())
+                        </p>
+                    }
+                </section>
+            }
 
             @if (!string.IsNullOrWhiteSpace(ResultSingle))
             {
                 <div class="result">@ResultSingle</div>
             }
-
         </section>
+
+       
     }
     else
     {
@@ -190,9 +214,11 @@
                     </table>
                 </div>
             </section>
+
+            
         }
 
-        }
+
 
 
     }
@@ -215,7 +241,7 @@
 
     Mode current = Mode.Single;
 
-    // Placeholder-Daten – später via API
+    // Placeholder-Daten später via API
 
     List<string> teams = new();
     bool teamsLoading = false;
@@ -291,7 +317,7 @@
             teamsError = null;
 
 
-            var seasonYear = Season.Split('/')[0]; // nur erstes Jahr, z. B. "2024"
+            var seasonYear = Season.Split('/')[0]; // nur erstes Jahr, zB 2024
             var url = $"https://api.openligadb.de/getavailableteams/{leagueShortcut}/{seasonYear}";
 
             var data = await Http.GetFromJsonAsync<List<OlTeam>>(url);
@@ -320,7 +346,7 @@
     } 
 
 
-    class MatchProbs
+    class MatchProps
     {
         private string _league;
         private string _seasonLabel;
@@ -341,7 +367,7 @@
             get => _matchDay;
         } // Standardmäßig 1, kann angepasst werden
 
-        public MatchProbs(string league, string seasonLabel, int seasonYear, string homeTeam, string awayTeam,DateTime kickOff, int matchday)
+        public MatchProps(string league, string seasonLabel, int seasonYear, string homeTeam, string awayTeam,DateTime kickOff, int matchday)
         {
             if (string.IsNullOrWhiteSpace(league)) throw new ArgumentException("Bitte Liga auswählen");
             if (string.IsNullOrWhiteSpace(seasonLabel)) throw new ArgumentException("Bitte Saison auswählen");
@@ -359,7 +385,7 @@
         }
 
     }
-    //Aufbereitete, numerische Merkmale für das Modell (aus MatchProps + API-Daten gebaut).
+    //Aufbereitete, numerische Merkmale für das Modell aus MatchProps + API-Daten gebaut.
     class MatchFeatures
     {
         public double FormHome { get; set; }
@@ -373,7 +399,7 @@
         public int TableRankAway { get; set; }
         public int MatchDay { get; set; }      // Spieltag (1–34)
 
-        public int WinsHome { get; set; }      // Saisonbilanz (aus API berechnet)
+        public int WinsHome { get; set; }      // Saisonbilanzaus API berechnet
         public int WinsAway { get; set; }
         public int LossesHome { get; set; }
         public int LossesAway { get; set; }
@@ -403,8 +429,41 @@
     bool showFullTable;
     List<OlTableRow> table = new(); // deine OlTableRow hast du schon – passt
 
+    List<OlTeam> teamsRaw = new();
+    Dictionary<string, string?> teamsIcon = new();
+
+
+
 
     record H2HView(string Team1, string Team2, int G1, int G2, DateTime DateLocal, string? Icon1, string? Icon2);
+    class MatchResultDto
+    {
+        public int resultTypeID { get; set; }
+        public int pointsTeam1 { get; set; }
+        public int pointsTeam2 { get; set; }
+    }
+
+    class TeamDto
+    {
+        public int TeamId { get; set; }
+        public string TeamName { get; set; } = "";
+        public string? TeamIconUrl { get; set; }
+    }
+
+    class MatchDto
+    {
+        public DateTime matchDateTimeUTC { get; set; }
+        public bool MatchIsFinished { get; set; }
+        public string leagueShortcut { get; set; }
+        public int LeagueSeason { get; set; }
+        public TeamDto Team1 { get; set; }
+        public TeamDto Team2 { get; set; }
+        public List<MatchResultDto> matchResults { get; set; } = new();
+    }
+
+
+
+    Dictionary<string, string?> teamIcons = new();
 
     private async Task LoadTableAsync(){
         tableError = null;
@@ -412,7 +471,7 @@
         table.Clear();
 
         try{
-            var seasonYear = Season.Split("/")[0]; // "2025" aus "2025/26"
+            var seasonYear = Season.Split("/")[0]; // 2025 wird zu 2025/26
             var url = $"https://api.openligadb.de/getbltable/{leagueShortcut}/{seasonYear}";
             var rows = await Http.GetFromJsonAsync<List<OlTableRow>>(url) ?? new();
             table = rows.OrderBy(r => r.Rank).ToList();
@@ -430,10 +489,124 @@
 
     }
 
-    Dictionary<string, string?> teamIcons = new();
+    async Task LoadTeamsAsync2()
+    {
+        teamsError = null;
+        teamsLoading = true;
+        teams.Clear();
+
+        try
+        {
+            var seasonYear = Season.Split("/")[0]; // 2025 wird zu 2025/26
+            var url = $"https://api.openligadb.de/getavailableteams/{leagueShortcut}/{seasonYear}";
+
+            var data = await Http.GetFromJsonAsync<List<OlTeam>>(url) ?? new();
+            teamsRaw = data;
+
+            teams = data.Select(t => t.TeamName).OrderBy(n => n).ToList();
+            teamsIcon = data.ToDictionary(t => t.TeamName, t => t.TeamIconUrl);
 
 
-    // Nur UI-Feedback (kein echtes Rechnen)
+            if (!teams.Contains(TeamA)) TeamA = null;
+            if (!teams.Contains(TeamA)) TeamA = null;
+        }
+
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            teamsError = "Teams konnte nicht geladen werden";
+        }
+        finally
+        {
+            teamsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task LoadH2Async()
+    {
+        h2hError = null;
+        isLoadingH2H = true;
+        lastH2H = null;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(TeamA) || string.IsNullOrWhiteSpace(TeamB) || TeamA == TeamB)
+            {
+                teamsError = "Bitte 2 unterschiedliche Teams wählen";
+                return;
+            }
+
+            var seasonYear = Season.Split("/")[0]; // 2025 wird zu 2025/26
+            var url = $"https://api.openligadb.de/getmatchdata/{leagueShortcut}/{seasonYear}";
+            var allMatches = await Http.GetFromJsonAsync<List<MatchDto>>(url) ?? new();
+
+            var duelle = allMatches
+    .Where(m =>
+        m.MatchIsFinished && // nur beendete Spiele
+        (
+          (string.Equals(m.Team1.TeamName, TeamA, StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(m.Team2.TeamName, TeamB, StringComparison.OrdinalIgnoreCase))
+          ||
+          (string.Equals(m.Team1.TeamName, TeamB, StringComparison.OrdinalIgnoreCase) &&
+           string.Equals(m.Team2.TeamName, TeamA, StringComparison.OrdinalIgnoreCase))
+        )
+    )
+    .OrderByDescending(m => m.matchDateTimeUTC)
+    .ToList();
+
+
+            var match = duelle.FirstOrDefault();
+            if (match == null)
+            {
+                h2hError = "Kein letztes spiel gefunden";
+                return;
+            }
+
+            var fulltime = match.matchResults.FirstOrDefault(r => r.resultTypeID == 2);
+            if (fulltime == null)
+            {
+                fulltime = match.matchResults.FirstOrDefault();
+            }
+
+            int g1;
+            int g2;
+            if (fulltime == null)
+            {
+                g1 = 0;
+                g2 = 0;
+            }
+            else{
+                g1 = fulltime.pointsTeam1;
+                g2 = fulltime.pointsTeam2;
+            }
+
+
+            teamIcons.TryGetValue(match.Team1.TeamName ?? "", out var icon1);
+            teamIcons.TryGetValue(match.Team2.TeamName ?? "", out var icon2);
+
+            lastH2H = new H2HView(
+                 match.Team1?.TeamName ?? "Team A",
+                match.Team2?.TeamName ?? "Team B",
+                 g1, g2,
+                match.matchDateTimeUTC.ToLocalTime(),
+                icon1, icon2
+        );
+        }
+
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            h2hError = "Laden nicht möglich";
+        }
+        finally
+        {
+            isLoadingH2H = false;
+            StateHasChanged();
+        }
+
+        }
+    // bsp methoden
     void FakeRunSingle()
     {
         if (string.IsNullOrWhiteSpace(TeamA) || string.IsNullOrWhiteSpace(TeamB) || TeamA == TeamB)
@@ -447,13 +620,14 @@
 
     void FakeRunSeason()
     {
-        if (_simulations < 0 || _simulations > 50000){
+        if (_simulations < 0 || _simulations > 50000)
+        {
             ResultSeason = "Bitte wähle eine Zahl von 1-50.000";
         }
-        else    
+        else
         {
             ResultSeason2 = $"Simulation vorbereitet: {League} • {Season} • {rounds} • {Simulations:N0} Läufe.";
         }
     }
-
+    
 }
