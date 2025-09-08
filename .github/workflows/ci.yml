@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore BundesligaSimulator/BundesligaSimulator.csproj
+
+      - name: Build
+        run: dotnet build BundesligaSimulator/BundesligaSimulator.csproj --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish BundesligaSimulator/BundesligaSimulator.csproj -c Release -o out --no-restore
+
+      - name: Docker Build
+        run: docker build -t bundesliga-sim-ui .
