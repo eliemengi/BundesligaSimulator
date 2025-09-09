@@ -39,7 +39,8 @@ Two modes: **Single Match** and **Full Season** simulation. UI is already implem
 ## Project structure (high-level)
 
 
-> **Note:** The UI is complete. The initial prototype logic lived inside `HomeWeather.razor` to iterate fast; it’s now being **refactored into `/Core`** so the codebase becomes clean, testable, and reusable.
+> **Note:** The UI is complete. The initial prototype logic lived inside `HomeWeather.razor` to iterate fast; it’s now being **refactored into `/Core`** so the codebase becomes clean, testable, and reusable.  
+> **CI/CD & Docker:** The project uses GitHub Actions for continuous integration and delivery. Every commit is automatically built, tested, and published as a ready-to-run Docker image. This makes the simulator instantly deployable on **Windows 🪟, macOS 🍏, and Linux 🐧** without manual setup.
 
 ---
 
@@ -68,7 +69,8 @@ Two modes: **Single Match** and **Full Season** simulation. UI is already implem
 - **Frontend:** Blazor (Razor components), HTML, CSS (custom, no framework lock-in).  
 - **Language:** C# (.NET 8).  
 - **Data / ML (iterative):** probability models first; upgrade path to matrix methods and Poisson goal models; optional xG-style calibrations.  
-- **API (planned):** **OpenLigaDB** for real teams, fixtures, badges; the simulation logic stays **decoupled** from the API client.
+- **API (planned):** **OpenLigaDB** for real teams, fixtures, badges; the simulation logic stays **decoupled** from the API client.  
+- **DevOps:** Docker + GitHub Actions CI/CD for automated builds, tests, and cross-platform deployment (Windows 🪟, macOS 🍏, Linux 🐧).
 
 ---
 
@@ -79,7 +81,7 @@ Two modes: **Single Match** and **Full Season** simulation. UI is already implem
 - Introduce **Poisson goal models** and/or calibrated logistic for W/D/L.  
 - Deterministic **unit tests** in `/Tests` (seeded RNG).  
 - Optional: export results as CSV/JSON for analysis.  
-- Optional: CI workflow to run sample simulations on push.
+- **CI/CD extension:** automatic Docker image publishing (done) + optional deploy to live demo hosting.  
 
 ---
 
@@ -88,8 +90,29 @@ Two modes: **Single Match** and **Full Season** simulation. UI is already implem
 **Requirements**
 - .NET 8 SDK (or the version in your `.csproj`).
 - (Optional) A modern browser (Blazor runs client/server depending on template).
+- (Alternative) Docker installed (Windows 🪟, macOS 🍏, Linux 🐧).
 
-**Run**
+**Run manually**
+
+🪟 Windows (PowerShell / CMD)
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+start http://localhost:8080
+
+---
+🍏 macOS (Terminal)
+
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+open http://localhost:8080
+
+---
+
+🐧 Linux (bash / zsh)
+
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+xdg-open http://localhost:8080   # oder manuell im Browser öffnen
 ```bash
 # from the solution directory
 dotnet restore
@@ -99,5 +122,3 @@ dotnet run
 
 
 
-If you want, I can also generate a short **commit message set** you can reuse (for features, refactors, fixes) and a minimal **CONTRIBUTING.md** and **CODE_OF_CONDUCT.md** to make the repo look extra pro.
-::contentReference[oaicite:0]{index=0}
