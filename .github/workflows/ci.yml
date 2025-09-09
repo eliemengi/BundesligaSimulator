@@ -28,5 +28,6 @@ jobs:
       - name: Publish
         run: dotnet publish BundesligaSimulator/BundesligaSimulator.csproj -c Release -o out --no-restore
 
-      - name: Docker Build
-        run: docker build -t bundesliga-sim-ui .
+      - name: Docker Build (subfolder)
+  working-directory: BundesligaSimulator
+  run: docker build -t bundesliga-sim-ui -f Dockerfile .
