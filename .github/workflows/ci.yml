@@ -28,6 +28,7 @@ jobs:
       - name: Publish
         run: dotnet publish BundesligaSimulator/BundesligaSimulator.csproj -c Release -o out --no-restore
 
+      # ⬇️ WICHTIG: Dockerfile liegt im Unterordner "BundesligaSimulator"
       - name: Docker Build (subfolder)
-  working-directory: BundesligaSimulator
-  run: docker build -t bundesliga-sim-ui -f Dockerfile .
+        working-directory: BundesligaSimulator
+        run: docker build -t bundesliga-sim-ui -f Dockerfile .
