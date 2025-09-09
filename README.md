@@ -1,13 +1,58 @@
-# Bundesliga ML Simulator · Blazor / C# / ML
+# Bundesliga ML Simulator · Blazor / C# / ML · **+ Docker CI/CD 🚀**
 
 ![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-512BD4?logo=blazor&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-blue?logo=docker&logoColor=white)
+![CI/CD](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-success?logo=githubactions&logoColor=white)
 ![Status](https://img.shields.io/badge/Project-Active-brightgreen)
 [![License](https://img.shields.io/github/license/your-username/your-repo)](./LICENSE)
 
 A hands-on **Bundesliga match & season simulator** built with **Blazor** (UI), **C#** (logic) and **simple ML/probability modeling** under the hood.  
 Two modes: **Single Match** and **Full Season** simulation. UI is already implemented; logic is iteratively refactored from a first, working prototype into clean, testable classes.
+
+---
+
+## 🔥 New: Ready-to-use Docker Image (CI/CD powered)
+
+This project is not just code — it’s **CI/CD-ready**.  
+Every push to `main` automatically builds & publishes a Docker image to **GitHub Container Registry (GHCR)**.  
+That means: you don’t need to install .NET, Blazor or dependencies.  
+👉 Just pull & run the image.
+
+### How to run via Docker
+
+**Pull latest image**
+```bash
+
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+## 🚀 Quickstart with Docker
+
+Pull & run the Bundesliga Simulator instantly – no setup required.  
+Choose your OS below:
+
+---
+
+### 🪟 Windows (PowerShell / CMD)
+
+```powershell
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+start http://localhost:8080
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+xdg-open http://localhost:8080   # oder manuell im Browser öffnen
+
+docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
+docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
+open http://localhost:8080
+
+
+Das gibt dir im README drei klar getrennte Blöcke mit **Icons für Windows, Linux, Mac** + Copy-Paste Befehle.  
+
+Soll ich dir zusätzlich noch einen **Docker-Badge** einbauen (blauer Button im Header, der direkt auf dein GHCR-Image zeigt)?
 
 ---
 
