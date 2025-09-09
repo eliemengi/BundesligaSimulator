@@ -1,6 +1,8 @@
-bin/
-obj/
+bin
+obj
 .git
 .github
+.vscode
 *.user
 *.suo
+*.swp
