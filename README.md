@@ -1,179 +1,124 @@
-# Bundesliga ML Simulator · Blazor / C# / ML / Docker CI/CD
+# Bundesliga ML Simulator · Blazor / C# / ML
 
 ![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet&logoColor=white)
 ![Blazor](https://img.shields.io/badge/Blazor-512BD4?logo=blazor&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![CI/CD](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
 ![Status](https://img.shields.io/badge/Project-Active-brightgreen)
+[![License](https://img.shields.io/github/license/your-username/your-repo)](./LICENSE)
 
-A machine learning based Bundesliga simulator that predicts match outcomes and full league seasons.  
-Built with **C#**, **Blazor** and statistical models, featuring both **single-match** and **season** simulations.  
-The project is fully integrated with **Docker-based CI/CD** using **GitHub Actions** – every commit is automatically built, tested, and published as a ready-to-run Docker image.  
-
-This means: **no manual setup, no dependency hell** – anyone can run the simulator on **Windows**, **macOS**, or **Linux** in seconds with Docker.  
-Perfect for showcasing DevOps practices (CI, CD, containerization) alongside C# and Blazor development.
+A hands-on **Bundesliga match & season simulator** built with **Blazor** (UI), **C#** (logic) and **simple ML/probability modeling** under the hood.  
+Two modes: **Single Match** and **Full Season** simulation. UI is already implemented; logic is iteratively refactored from a first, working prototype into clean, testable classes.
 
 ---
 
-## 🚀 Quickstart with Docker (choose your OS)
+## Why this project?
 
-Thanks to CI/CD, the Docker image is always up to date. Pull & run it on your system:
+- I wanted a **real, end-to-end app** that blends **clean UI** with **practical simulation logic** for football.  
+- It’s intentionally beginner-friendly in structure (start simple → refactor into proper domain classes), while still teaching **probabilities, matrices, and basic model calibration**.
 
 ---
 
-### 🪟 Windows (PowerShell / CMD)
+## Features (current)
 
-```powershell
-# 1) Pull the latest image from GitHub Container Registry (GHCR)
+- **Single Match** simulation (choose Home/Away/Neutral and teams).  
+- **Season Simulation** scaffolding (league, year, N simulations), UI wired and ready.  
+- **Working Blazor UI** with responsive layout (HTML/CSS) and clean components.  
+- **Deterministic or random seeds** for reproducible runs (dev/debug convenience).  
+- Gradual extraction of logic into dedicated classes (see “Project Structure”).
+
+---
+
+## Where is the main code?
+
+- **Primary UI + orchestration:** `Pages/HomeWeather.razor`  
+  This component currently wires up the inputs, runs the simulation, and renders results.  
+  As the project evolves, computational logic migrates into dedicated classes (below).
+
+---
+
+## Project structure (high-level)
+
+
+> **Note:** The UI is complete. The initial prototype logic lived inside `HomeWeather.razor` to iterate fast; it’s now being **refactored into `/Core`** so the codebase becomes clean, testable, and reusable.  
+> **CI/CD & Docker:** The project uses GitHub Actions for continuous integration and delivery. Every commit is automatically built, tested, and published as a ready-to-run Docker image. This makes the simulator instantly deployable on **Windows 🪟, macOS 🍏, and Linux 🐧** without manual setup.
+
+---
+
+## How it works (short version)
+
+1. **Inputs → MatchProps**  
+   Home team, away team, venue (home/away/neutral), optional form multipliers, and any manual probability tweaks.
+
+2. **Team baseline**  
+   Basic **attack/defense strength** per team (initially static/hand-tuned, later fed by API or precomputed ratings).
+
+3. **Probability model**  
+   Start simple (e.g., home-advantage offset + form factor), then iterate toward **Poisson-style goal models** or a calibrated logistic for outcomes (Win/Draw/Loss).
+
+4. **Simulation loop**  
+   - **Single Match:** sample or compute expected score/outcome once (or N times and aggregate).  
+   - **Season:** iterate matchdays, accumulate table, then compute distribution of standings over many runs.
+
+5. **Results**  
+   Return a `MatchResult` / season table with goals, winner, and summary stats. The UI renders neat cards/sections from that.
+
+---
+
+## Tech stack
+
+- **Frontend:** Blazor (Razor components), HTML, CSS (custom, no framework lock-in).  
+- **Language:** C# (.NET 8).  
+- **Data / ML (iterative):** probability models first; upgrade path to matrix methods and Poisson goal models; optional xG-style calibrations.  
+- **API (planned):** **OpenLigaDB** for real teams, fixtures, badges; the simulation logic stays **decoupled** from the API client.  
+- **DevOps:** Docker + GitHub Actions CI/CD for automated builds, tests, and cross-platform deployment (Windows 🪟, macOS 🍏, Linux 🐧).
+
+---
+
+## Roadmap (next steps)
+
+- Extract all computation from `Pages/HomeWeather.razor` into `/Core` classes (see structure above).  
+- Add **OpenLigaDB** client and map real fixtures/teams.  
+- Introduce **Poisson goal models** and/or calibrated logistic for W/D/L.  
+- Deterministic **unit tests** in `/Tests` (seeded RNG).  
+- Optional: export results as CSV/JSON for analysis.  
+- **CI/CD extension:** automatic Docker image publishing (done) + optional deploy to live demo hosting.  
+
+---
+
+## Getting started
+
+**Requirements**
+- .NET 8 SDK (or the version in your `.csproj`).
+- (Optional) A modern browser (Blazor runs client/server depending on template).
+- (Alternative) Docker installed (Windows 🪟, macOS 🍏, Linux 🐧).
+
+**Run manually**
+
+🪟 Windows (PowerShell / CMD)
 docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 2) Run the container, map port 8080 to localhost
 docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 3) Open the app in your browser
 start http://localhost:8080
+
+---
 🍏 macOS (Terminal)
-bash
-Code kopieren
-# 1) Pull the latest image
+
 docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 2) Run the container
 docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 3) Open in Safari / default browser
 open http://localhost:8080
+
+---
+
 🐧 Linux (bash / zsh)
-bash
-Code kopieren
-# 1) Pull the latest image
+
 docker pull ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 2) Run the container
 docker run -p 8080:80 ghcr.io/eliemengi/bundesliga-sim-ui:latest
-
-# 3) Open in your browser
-xdg-open http://localhost:8080   # or open manually
-✅ After this, the simulator runs locally at http://localhost:8080 on any platform.
-This demonstrates a full DevOps pipeline: CI (build & test) + CD (publish Docker image) → seamless developer and user experience.
-
-🎯 Why this project?
-A real, end-to-end app blending clean UI with practical football simulation logic.
-
-Beginner-friendly structure: start with simple logic, then refactor into proper domain classes.
-
-Demonstrates DevOps readiness: CI/CD pipelines, Docker containerization, reproducibility.
-
-Teaches probability models, matrices, and model calibration along the way.
-
-Built as a showcase project for software engineering, DevOps, and applied machine learning.
-
-✨ Features
-Single Match simulation: choose Home/Away/Neutral, teams, and get outcome probabilities.
-
-Season Simulation scaffolding: simulate an entire league with many runs.
-
-Modern Blazor UI with responsive layout and clean components.
-
-Deterministic or random seeds for reproducible runs.
-
-Refactoring in progress: logic is moving into clean, testable core classes.
-
-Docker-ready: containerized, portable, identical runs everywhere.
-
-CI/CD integration: automatic builds & published Docker image with every push.
-
-🗂 Project structure
-UI + orchestration: Pages/Home.razor
-
-Core logic (refactor target): /Core
-
-Docker configuration: BundesligaSimulator/Dockerfile, nginx.conf, .dockerignore
-
-CI/CD pipelines: .github/workflows/ci.yml (build), .github/workflows/cd.yml (publish to GHCR)
-
-⚙️ How it works
-Inputs → MatchProps (teams, venue, form multipliers).
-
-Team baseline → attack/defense strengths (static, later via API).
-
-Probability model → start with simple offsets, expand to Poisson/logistic models.
-
-Simulation loop → single match OR full season iterations.
-
-Results → predicted goals, outcome, season standings.
-
-🛠 Tech stack
-Frontend: Blazor, HTML, CSS
-
-Language: C# (.NET 8)
-
-Models: simple probability → Poisson/logistic
-
-API (planned): OpenLigaDB (real fixtures, teams, logos)
-
-DevOps: GitHub Actions (CI/CD), Docker, GHCR
-
-Hosting (planned): Render / Azure for live deployment
-
-📌 Roadmap
-✅ Refactor computation into /Core classes
-
-✅ Add Dockerfile + nginx.conf + dockerignore
-
-✅ GitHub Actions CI (build, test, publish)
-
-✅ GitHub Actions CD (push Docker image to GHCR)
-
-🔜 Add OpenLigaDB API client (real fixtures/teams)
-
-🔜 Implement Poisson models for goal distribution
-
-🔜 Add unit testing suite (xUnit)
-
-🔜 Export results as CSV/JSON
-
-🔜 Optional: Auto-deploy to Render/Azure with live URL
-
-▶️ Getting started (manual run without Docker)
-For developers who want to run locally without Docker:
-
-Requirements: .NET 8 SDK, Browser
-
-bash
-Code kopieren
+xdg-open http://localhost:8080   # oder manuell im Browser öffnen
+```bash
+# from the solution directory
 dotnet restore
 dotnet build
 dotnet run
-Then open http://localhost:5000 (or the port shown in terminal).
-
-✅ Summary
-This project is both a football simulator and a DevOps case study:
-
-Built with C# / Blazor for modern frontend.
-
-Uses ML-inspired statistical models for simulation.
-
-Packaged with Docker for platform independence.
-
-Fully automated CI/CD pipelines ensure every push delivers a fresh, working Docker image.
-
-Perfect for showing skills in software engineering, DevOps, and applied data science.
-
-yaml
-Code kopieren
-
----
-
-Das ist jetzt ein richtig ausführlicher, sauber strukturierter, professioneller README – alles in **einem Markdown-Block**, mit extra OS-Blöcken (Windows → macOS → Linux in der Reihenfolge) und klarer Betonung auf **CI, CD, Docker**.  
-
-👉 Soll ich dir auch gleich noch einen **Badge einbauen, der direkt auf dein Docker-Image in GHCR verlinkt**, sodass im Header sofort „Docker Pull“ steht?
 
 
 
 
-
-
-
-ChatGPT fragen
