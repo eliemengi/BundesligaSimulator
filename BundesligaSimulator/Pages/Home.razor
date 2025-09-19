@@ -120,6 +120,7 @@
                     <select @bind="League">
                         <option value="bl1">Bundesliga (1)</option>
                         <option value="bl2" disabled>2. Bundesliga (bald)</option>
+                        <option value="bl2" disabled>DFB Pokal (bald)</option>
                     </select>
                 </div>
 
@@ -531,69 +532,69 @@
 
         try
         {
+            // Eingabe prüfen
             if (string.IsNullOrWhiteSpace(TeamA) || string.IsNullOrWhiteSpace(TeamB) || TeamA == TeamB)
             {
-                teamsError = "Bitte 2 unterschiedliche Teams wählen";
+                h2hError = "Bitte 2 unterschiedliche Teams wählen";
                 return;
             }
 
-            var seasonYear = Season.Split("/")[0]; // 2025 wird zu 2025/26
-            var url = $"https://api.openligadb.de/getmatchdata/{leagueShortcut}/{seasonYear}";
-            var allMatches = await Http.GetFromJsonAsync<List<MatchDto>>(url) ?? new();
+            // Startjahr aus "2025/26" → 2025
+            var startYear = int.Parse(Season.Split('/')[0]);
+            const int MaxLookbackYears = 10;   // wv jahre gehen wir zurück
 
-            var duelle = allMatches
-    .Where(m =>
-        m.MatchIsFinished && // nur beendete Spiele
-        (
-          (string.Equals(m.Team1.TeamName, TeamA, StringComparison.OrdinalIgnoreCase) &&
-           string.Equals(m.Team2.TeamName, TeamB, StringComparison.OrdinalIgnoreCase))
-          ||
-          (string.Equals(m.Team1.TeamName, TeamB, StringComparison.OrdinalIgnoreCase) &&
-           string.Equals(m.Team2.TeamName, TeamA, StringComparison.OrdinalIgnoreCase))
-        )
-    )
+            MatchDto? match = null;
+
+            for (int i = 0; i < MaxLookbackYears; i++)
+            {
+                var seasonYear = startYear - i;
+                var url = $"https://api.openligadb.de/getmatchdata/{leagueShortcut}/{seasonYear}";
+
+                // gesamte Saison ziehen
+                var data = await Http.GetFromJsonAsync<List<MatchDto>>(url) ?? new();
+
+                //  beendete Spiele der beiden Teams, die neusten zuerst
+                var duels = data
+    .Where(m => m.MatchIsFinished && DesireMatch(m, TeamA, TeamB, venue))
     .OrderByDescending(m => m.matchDateTimeUTC)
     .ToList();
 
 
-            var match = duelle.FirstOrDefault();
+                match = duels.FirstOrDefault();
+                if (match != null)
+                    break; //  fertiges Duell gefunden = Schleife beenden
+            }
+
             if (match == null)
             {
-                h2hError = "Kein letztes spiel gefunden";
+                h2hError = $"Kein Duell in den letzten {MaxLookbackYears} Saisons gefunden.";
                 return;
             }
 
-            var fulltime = match.matchResults.FirstOrDefault(r => r.resultTypeID == 2);
-            if (fulltime == null)
-            {
-                fulltime = match.matchResults.FirstOrDefault();
-            }
+            // Endergebnis (resultTypeID == 2 = Fulltime). Fallback: erstes Resultat
+            var fulltime = match.matchResults.FirstOrDefault(r => r.resultTypeID == 2)
+                           ?? match.matchResults.FirstOrDefault();
 
-            int g1;
-            int g2;
-            if (fulltime == null)
+            int g1 = 0, g2 = 0;
+            if (fulltime != null)
             {
-                g1 = 0;
-                g2 = 0;
-            }
-            else{
                 g1 = fulltime.pointsTeam1;
                 g2 = fulltime.pointsTeam2;
             }
 
-
+            // Logos falls vorhanden
             teamIcons.TryGetValue(match.Team1.TeamName ?? "", out var icon1);
             teamIcons.TryGetValue(match.Team2.TeamName ?? "", out var icon2);
 
+            // View-Daten setzen
             lastH2H = new H2HView(
-                 match.Team1?.TeamName ?? "Team A",
+                match.Team1?.TeamName ?? "Team A",
                 match.Team2?.TeamName ?? "Team B",
-                 g1, g2,
+                g1, g2,
                 match.matchDateTimeUTC.ToLocalTime(),
                 icon1, icon2
-        );
+            );
         }
-
         catch (Exception ex)
         {
             Console.WriteLine(ex);
@@ -604,8 +605,41 @@
             isLoadingH2H = false;
             StateHasChanged();
         }
+    }
 
+    // HEIM AISWÄRTS UNTERSCHIEDE
+
+    bool SameName(string? x, string? y)
+    {
+        if (string.IsNullOrWhiteSpace(x) || string.IsNullOrWhiteSpace(y)) return false;
+        return string.Equals(x.Trim(), y.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+    string neutral = "Es gibt keine Neutralen Bundesliga Spiele";
+
+    bool DesireMatch(MatchDto m, string teamA, string teamB, Venue v)
+    {
+        var t1 = m.Team1?.TeamName; // Team1 = Heim
+        var t2 = m.Team2?.TeamName; // Team2 = Auswärts
+
+        if (v == Venue.Home)
+        {
+            // Team A soll Heim , Team B Auswärts
+            return SameName(t1, teamA) && SameName(t2, teamB);
         }
+        else if (v == Venue.Away)
+        {
+            // Team B Heim , Team A Auswärts
+            return SameName(t1, teamB) && SameName(t2, teamA);
+        }
+        else // Venue.Neutral
+        {
+            // Beide Reihenfolgen zulassen
+             
+            return (SameName(t1, teamA) && SameName(t2, teamB))
+                || (SameName(t1, teamB) && SameName(t2, teamA));
+        }
+    }
+
     // bsp methoden
     void FakeRunSingle()
     {
