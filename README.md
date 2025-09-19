@@ -11,6 +11,19 @@ Two modes: **Single Match** and **Full Season** simulation. UI is already implem
 
 ---
 
+## Run with Docker
+
+1. Clone this repository  
+2. Build the Docker image:
+   ```bash
+   docker build -t bundesliga-sim .
+  Run the container:
+
+  docker run -p 8080:80 bundesliga-sim   
+---
+
+
+
 ## Why this project?
 
 - I wanted a **real, end-to-end app** that blends **clean UI** with **practical simulation logic** for football.  
