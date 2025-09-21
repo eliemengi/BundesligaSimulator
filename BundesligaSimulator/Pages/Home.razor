@@ -614,13 +614,13 @@
         if (string.IsNullOrWhiteSpace(x) || string.IsNullOrWhiteSpace(y)) return false;
         return string.Equals(x.Trim(), y.Trim(), StringComparison.OrdinalIgnoreCase);
     }
-    string neutral = "Es gibt keine Neutralen Bundesliga Spiele";
+
 
     bool DesireMatch(MatchDto m, string teamA, string teamB, Venue v)
     {
         var t1 = m.Team1?.TeamName; // Team1 = Heim
         var t2 = m.Team2?.TeamName; // Team2 = Auswärts
-
+        
         if (v == Venue.Home)
         {
             // Team A soll Heim , Team B Auswärts
@@ -631,13 +631,15 @@
             // Team B Heim , Team A Auswärts
             return SameName(t1, teamB) && SameName(t2, teamA);
         }
-        else // Venue.Neutral
+        else if (venue == Venue.Neutral)
         {
             // Beide Reihenfolgen zulassen
-             
-            return (SameName(t1, teamA) && SameName(t2, teamB))
-                || (SameName(t1, teamB) && SameName(t2, teamA));
+            return false;
         }
+        return false;
+
+
+
     }
 
     // bsp methoden
