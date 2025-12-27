@@ -5,7 +5,7 @@
 <div class="apple">
     <header class="hero">
         <h1>Bundesliga Simulation</h1>
-        <p class="sub">Wähle einen Modus und stell deine Simulation zusammen.</p>
+        <p class="sub">Wähle bitte einen Modus und stell deine Simulation zusammen.</p>
     </header>
 
     <!-- Segmented Control -->
@@ -555,10 +555,10 @@
 
                 //  beendete Spiele der beiden Teams, die neusten zuerst
                 var duels = data
-    .Where(m => m.MatchIsFinished && DesireMatch(m, TeamA, TeamB, venue))
-    .OrderByDescending(m => m.matchDateTimeUTC)
-    .ToList();
-
+                .Where(m => m.MatchIsFinished && DesireMatch(m, TeamA, TeamB, venue))
+                .OrderByDescending(m => m.matchDateTimeUTC)
+                .ToList();
+                
 
                 match = duels.FirstOrDefault();
                 if (match != null)
