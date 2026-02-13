@@ -1,0 +1,27 @@
+﻿@page "/vergleich"
+
+<h1>Vergleich</h1>
+
+<div style="text-align:center;">
+    <img src="@bilder[index]"
+         style="max-width:100%; height:auto; border-radius:12px;" />
+</div>
+
+<div style="margin-top:16px; display:flex; justify-content:center; gap:12px;">
+    <button class="btn btn-secondary" @onclick="Prev">Zurück</button>
+    <button class="btn btn-primary" @onclick="Next">Weiter</button>
+</div>
+
+@code {
+    private int index = 0;
+
+    private readonly string[] bilder = new[]
+    {
+        "img/vergleich/platzierung.png",
+        "img/vergleich/punkte.png",
+        "img/vergleich/tordiff.png"
+    };
+
+    private void Next() => index = (index + 1) % bilder.Length;
+    private void Prev() => index = (index - 1 + bilder.Length) % bilder.Length;
+}
